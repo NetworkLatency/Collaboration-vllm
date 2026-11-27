@@ -1,0 +1,51 @@
+# TokenRouter x vLLM v0.33.0 (GlimpRouter) dual-engine configuration
+# Adjust model paths, CUDA_VISIBLE_DEVICES, and tensor_parallel_size for your 8xA100 server.
+
+routing:
+  # Entropy threshold on SLM probe tokens; >= threshold hands off step to LLM.
+  threshold: 0.5
+  # Step boundary delimiter (Qwen3 / DeepSeek-R1 reasoning step separator).
+  delimiter_str: "\n\n"
+  # End-of-thinking marker; once emitted, LLM generates the entire final answer.
+  finished_str: "</think>"
+  # Fixed number of SLM probe tokens per step (n >= 1).
+  probe_tokens: 1
+  # Entropy aggregation across the n probe tokens: "mean" or "max".
+  probe_agg: "mean"
+  # Top-k logprobs requested internally on SLM for entropy estimation.
+  top_logprobs: 20
+  # Tail decoding window size (tokens) used for delimiter / </think> matching.
+  tail_window_tokens: 8
+
+transport:
+  # Use ipc:// on a single multi-GPU node (lowest latency), or tcp://IP:PORT across nodes.
+  slm_bind_address: "ipc:///tmp/tokenrouter_vllm_slm.ipc"
+  llm_bind_address: "ipc:///tmp/tokenrouter_vllm_llm.ipc"
+
+slm:
+  model_name: "slm"
+  model: "Qwen/Qwen3-0.6B"
+  served_model_name: "tokenrouter-glimp"
+  cuda_visible_devices: "0"
+  host: "0.0.0.0"
+  port: 8000
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.85
+  max_model_len: 16384
+  max_num_seqs: 64
+  dtype: "bfloat16"
+  extra_args: []
+
+llm:
+  model_name: "llm"
+  model: "Qwen/Qwen3-32B"
+  served_model_name: "tokenrouter-llm-peer"
+  cuda_visible_devices: "1,2"
+  host: "127.0.0.1"
+  port: 8001
+  tensor_parallel_size: 2
+  gpu_memory_utilization: 0.85
+  max_model_len: 16384
+  max_num_seqs: 64
+  dtype: "bfloat16"
+  extra_args: []
